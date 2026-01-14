@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divisor de Gastos Premium</title>
+    <!-- TailwindCSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-900 text-white font-outfit min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl flex justify-between items-center mb-8 animate-fade-in-down">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-tr from-purple-500 to-pink-500 p-3 rounded-xl shadow-lg shadow-purple-500/30">
+                <i class="fa-solid fa-file-invoice-dollar text-2xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">SplitIt</h1>
+        </div>
+        <button onclick="resetApp()" class="text-sm text-gray-400 hover:text-red-400 transition-colors flex items-center gap-2">
+            <i class="fa-solid fa-trash-can"></i> Reiniciar
+        </button>
+    </header>
+
+    <!-- Dashboard Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mb-8 animate-fade-in-up">
+        <!-- Total Spent -->
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-start gap-2 border border-white/10 relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-500/30 transition-all"></div>
+            <span class="text-gray-400 text-sm font-medium">Total Gastado</span>
+            <div class="text-4xl font-bold text-white flex items-baseline gap-1">
+                <span class="text-2xl text-purple-400">$</span>
+                <span id="total-spent">0.00</span>
+            </div>
+        </div>
+
+        <!-- Participants -->
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-start gap-2 border border-white/10 relative overflow-hidden group">
+             <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-all"></div>
+             <span class="text-gray-400 text-sm font-medium">Participantes</span>
+             <div class="text-4xl font-bold text-white" id="participant-count">0</div>
+        </div>
+
+        <!-- Average -->
+        <div class="glass-panel p-6 rounded-2xl flex flex-col items-start gap-2 border border-white/10 relative overflow-hidden group">
+             <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-500/20 rounded-full blur-2xl group-hover:bg-green-500/30 transition-all"></div>
+             <span class="text-gray-400 text-sm font-medium">Promedio por Persona</span>
+             <div class="text-4xl font-bold text-white flex items-baseline gap-1">
+                <span class="text-2xl text-green-400">$</span>
+                <span id="average-cost">0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-4xl mb-24">
+        
+        <!-- Left Column: Inputs -->
+        <div class="flex flex-col gap-6 animate-fade-in-left">
+            
+            <!-- Add Participant Section -->
+            <div class="glass-panel p-6 rounded-2xl border border-white/10">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-users text-blue-400"></i> Participantes
+                </h2>
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="new-participant-name" placeholder="Nombre (ej. Juan)" 
+                           class="flex-1 bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder-gray-500">
+                    <button onclick="addParticipant()" 
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-600/20 transition-all active:scale-95">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                <!-- Participants List Tags -->
+                <div id="participants-list" class="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar">
+                    <!-- Dynamic Badges -->
+                </div>
+            </div>
+
+            <!-- Add Expense Section -->
+            <div class="glass-panel p-6 rounded-2xl border border-white/10 relative">
+                <!-- Overlay if no participants -->
+                <div id="expense-overlay" class="absolute inset-0 bg-gray-900/80 backdrop-blur-sm z-10 rounded-2xl flex flex-col items-center justify-center text-center p-6 transition-opacity duration-300">
+                    <i class="fa-solid fa-ban text-3xl text-gray-500 mb-2"></i>
+                    <p class="text-gray-400">Agrega participantes para cargar gastos</p>
+                </div>
+
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-money-bill-wave text-green-400"></i> Cargar Gasto
+                </h2>
+                
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 mb-1">¿Quién pagó?</label>
+                        <select id="expense-payer" class="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors cursor-pointer appearance-none">
+                            <!-- Options populate dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-gray-500 mb-1">Concepto</label>
+                            <input type="text" id="expense-desc" placeholder="ej. Asado" 
+                                class="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-gray-500 mb-1">Monto ($)</label>
+                            <input type="number" id="expense-amount" placeholder="0.00" min="0" step="0.01" 
+                                class="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <button onclick="addExpense()" class="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-semibold shadow-lg shadow-green-600/20 transition-all active:scale-95 mt-2">
+                        Agregar Gasto
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Lists & Results -->
+        <div class="flex flex-col gap-6 animate-fade-in-right">
+            
+            <!-- Expenses List -->
+            <div class="glass-panel p-6 rounded-2xl border border-white/10 flex-1 min-h-[300px] flex flex-col">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2 justify-between">
+                    <span><i class="fa-solid fa-list-ul text-purple-400"></i> Historial</span>
+                    <span class="text-xs bg-gray-800 px-2 py-1 rounded-md text-gray-400" id="expense-count-badge">0 items</span>
+                </h2>
+                
+                <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3" id="expenses-history">
+                    <!-- Dynamic Expense Items -->
+                    <div class="text-center text-gray-600 py-10 italic">No hay gastos registrados aún.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Results Section (Full Width Bottom) -->
+    <div id="results-section" class="w-full max-w-4xl mb-32 hidden animate-fade-in-up">
+        <h2 class="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
+            <i class="fa-solid fa-scale-balanced text-yellow-400"></i> Balance Final
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <!-- Balances List -->
+             <div class="glass-panel p-6 rounded-2xl border border-white/10">
+                <h3 class="text-lg font-semibold text-gray-300 mb-4">Estado de cada uno</h3>
+                <div id="individual-balances" class="space-y-3">
+                    <!-- Balances bars -->
+                </div>
+            </div>
+
+            <!-- Settlement Plan (Who pays who) -->
+            <div class="glass-panel p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-800">
+                <h3 class="text-lg font-semibold text-gray-300 mb-4 flex justify-between items-center">
+                    <span>Plan de Pagos Optimo</span>
+                    <i class="fa-solid fa-check-double text-green-400"></i>
+                </h3>
+                <div id="settlement-plan" class="space-y-3">
+                     <!-- Settlement instructions -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button for Download PDF -->
+    <div class="fixed bottom-8 right-8 z-50">
+        <button onclick="downloadPDF()" id="btn-download" disabled 
+                class="group flex items-center gap-3 bg-gradient-to-r from-pink-600 to-orange-500 text-white pl-4 pr-6 py-4 rounded-full shadow-2xl shadow-pink-500/30 hover:shadow-pink-500/50 transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+            <div class="bg-white/20 p-2 rounded-full">
+                <i class="fa-solid fa-file-pdf text-xl"></i>
+            </div>
+            <span class="font-bold text-lg">Descargar PDF</span>
+        </button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
